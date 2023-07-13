@@ -15,7 +15,7 @@ import {
 
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const PORT = process.env.PORT || 3000
+const PORT = process.env.PORT || 3000;
 
 const app = express();
 
@@ -129,14 +129,36 @@ app.get('/getobject', async (req, res) => {
 
 })
 
+app.post('/getdownloadurl', async (req, res) => {
 
-app.post('/upload', upload.single('attachment'), async (req, res) => {
+  const bucket = req.body.bucket ? req.body.bucket.trim() : process.env.BUCKET;
+
+  const key = req.body.key ? req.body.key.trim() : process.env.KEY;
 
   try {
 
-    fs.cre
+    const signedUrl = await getSignedUrl(S3, new GetObjectCommand({Bucket: bucket, Key: key}));
+
+    console.log(signedUrl)
+
+    return res.json({ error: false, data: signedUrl })
+
+  } catch (error) {
+
+    return res.json({ error: true, data: error.message })
+
+  }
+
+})
+
+app.post('/upload', upload.single('attachment'), async (req, res) => {
+
+  const bucket = req.body.bucket ? req.body.bucket.trim() : process.env.BUCKET;
+
+  try {
+
     const params = {
-      Bucket: process.env.BUCKET,
+      Bucket: bucket,
       Key: req.file.filename,
       Body: fs.createReadStream(req.file.path)
     };
