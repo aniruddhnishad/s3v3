@@ -114,12 +114,15 @@ app.get('/getobject', async (req, res) => {
     const key = req.body.key;
     
     const getObjectData = await S3.send( new GetObjectCommand({ Bucket: process.env.BUCKET, "Key": "1689286040924_195223592277.zip" }));
-    //getObjectData.Body.pipe(fs.createWriteStream('1689281214692_836539790217.zip'));
-    console.log(getObjectData);
-    console.log(
-      await getSignedUrl(S3, new GetObjectCommand({Bucket: process.env.BUCKET, "Key": "1689286040924_195223592277.zip"}), { expiresIn: 3600 })
-    )
-    return res.json({ error: false, data: getObjectData })
+    
+    const signedUrl = await getSignedUrl(S3, new GetObjectCommand({Bucket: process.env.BUCKET, "Key": "1689286040924_195223592277.zip"}), { expiresIn: 3600 });
+    
+	getObjectData.Body.pipe(res);
+	
+	//res.set("Content-Disposition", "inline;filename=1689286040924_195223592277.zip");
+	//res.end();
+	
+    //return res.json({ error: false, data: signedUrl })
 
   } catch (error) {
 
@@ -129,7 +132,7 @@ app.get('/getobject', async (req, res) => {
 
 })
 
-app.post('/getdownloadurl', async (req, res) => {
+app.get('/getdownloadurl', async (req, res) => {
 
   const bucket = req.body.bucket ? req.body.bucket.trim() : process.env.BUCKET;
 
