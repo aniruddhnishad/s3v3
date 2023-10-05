@@ -5,6 +5,8 @@ import * as fs from "fs";
 import * as path from "path";
 import multer from "multer";
 import cors from "cors";
+
+import {renderFile} from 'ejs'
 import {
   S3Client,
   ListBucketsCommand,
@@ -20,6 +22,9 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 app.disable('x-powered-by');
+app.set('view engine', 'ejs');
+app.set('views', './views');
+app.use(express.static('./public'));
 
 app.use(cors());
 
@@ -39,8 +44,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 const S3 = new S3Client({
-  region: "us-west-002",
-  endpoint: `https://s3.us-west-002.backblazeb2.com`,
+  region: "us-west-2",
+  endpoint: `https://i3h3.or.idrivee2-41.com`,
   credentials: {
     accessKeyId: process.env.ACCESS_KEY_ID,
     secretAccessKey: process.env.SECRET_ACCESS_KEY,
@@ -58,7 +63,7 @@ app.get('/', async (req, res) => {
       )
     );
 
-    return res.json({ error: false, data: 'done' })
+    return res.render('account')
 
   } catch (error) {
 
@@ -109,11 +114,17 @@ app.get('/getobject', async (req, res) => {
 
   try {
 
+    if(req.query.file && req.query.file == '') {
+
+      const file = req.query.file;
+      console.log(file)
+    }
+
     const bucket = req.body.bucket;
 
     const key = req.body.key;
     
-    const getObjectData = await S3.send( new GetObjectCommand({ Bucket: process.env.BUCKET, "Key": "1689286040924_195223592277.zip" }));
+    const getObjectData = await S3.send( new GetObjectCommand({ Bucket: process.env.BUCKET, "Key": "689286040924_195223592277.zip" }));
     
     const signedUrl = await getSignedUrl(S3, new GetObjectCommand({Bucket: process.env.BUCKET, "Key": "1689286040924_195223592277.zip"}), { expiresIn: 3600 });
     
@@ -125,9 +136,14 @@ app.get('/getobject', async (req, res) => {
     //return res.json({ error: false, data: signedUrl })
 
   } catch (error) {
+    console.log(error?.$metadata)
+if(error?.$metadata?.httpStatusCode == 404) {
 
-    return res.json({ error: true, data: error.message })
+  return res.status(404).send("<p>file not found!</p>")
 
+}
+    
+return res.send("<p>Unable to download file!</p>")
   }
 
 })
@@ -140,7 +156,7 @@ app.get('/getdownloadurl', async (req, res) => {
 
   try {
 
-    const signedUrl = await getSignedUrl(S3, new GetObjectCommand({Bucket: bucket, Key: key}));
+    const signedUrl = await getSignedUrl(S3, new PutObjectCommand({Bucket: process.env.BUCKET, "Key": "1689286040924_195223592277.zip"}), { expiresIn: 3600 });
 
     console.log(signedUrl)
 
@@ -163,14 +179,15 @@ app.post('/upload', upload.single('attachment'), async (req, res) => {
     const params = {
       Bucket: bucket,
       Key: req.file.filename,
-      Body: fs.createReadStream(req.file.path)
+      Body: fs.createReadStream(req.file.path),
+      ACL: 'public-read'
     };
 
     const putObjectData = await S3.send(new PutObjectCommand(params));
     
     console.log(putObjectData);
 
-    return res.json({ error: false, data: 'putObjectData' })
+    return res.json({ error: false, data: putObjectData })
 
   } catch (error) {
 
@@ -179,6 +196,22 @@ app.post('/upload', upload.single('attachment'), async (req, res) => {
   }
 
 })
+
+
+
+
+app.get('/sign-s3', async (req, res) => {
+
+  const fileName = req.query['file-name'];
+  //const fileType = req.query['file-type'];
+
+  console.log(fileName)
+
+  const signedUrl = await getSignedUrl(S3, new PutObjectCommand({Bucket: process.env.BUCKET, "Key": fileName }), { expiresIn: 3600 });
+
+  return res.json({url: signedUrl});
+
+});
 
 app.all("*", (req, res) => {
 
