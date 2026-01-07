@@ -16,11 +16,8 @@ import {
 } from "@aws-sdk/client-s3";
 
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
 const PORT = process.env.PORT || 3000;
-
 const app = express();
-
 app.disable('x-powered-by');
 app.set('view engine', 'ejs');
 app.set('views', './views');
